@@ -1,13 +1,13 @@
 // File: backend/utils/trustedUserManagement.ts
 
-import { TrustedUserContactInfo } from '../types/communication'; // Assuming this type will be defined soon
+import { TrustedUserContactInfo } from '../types/communication';
 
 export async function getTrustedUsersContactInfo(userId: string): Promise<TrustedUserContactInfo | undefined> {
   // This is a temporary, hardcoded implementation for initial functionality.
   // In the future, this data should be fetched securely from a database or configuration service.
 
   const trustedUsers: { [key: string]: TrustedUserContactInfo } = {
-    "Frankie": { // Using "Frankie" as the User ID
+    "frankie_delgado": { // Using "frankie_delgado" as the User ID
       email: "delgadofrankie139@gmail.com",
       phoneNumber: "+19033376079",
       preferences: { // Example of future preferences
@@ -15,7 +15,14 @@ export async function getTrustedUsersContactInfo(userId: string): Promise<Truste
         defaultChannel: "sms"
       }
     },
-    // Add other trusted users here (Jonah, Kalib) when their info is available
+    "crazyaj13": { // Adding Jonah Strayer with user ID crazyaj13
+      email: "js116466@gmail.com",
+      phoneNumber: "+19495547816",
+      preferences: {
+        receiveCriticalAlerts: true,
+        defaultChannel: "email" // Default to email for now, can be adjusted
+      }
+    } // Add other trusted users here (Kalib) when their info is available
   };
 
   return trustedUsers[userId];
