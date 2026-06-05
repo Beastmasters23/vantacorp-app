@@ -1,15 +1,10 @@
-### **New Project Directive: VantaOS Monitor Desktop Application**
+### **New Core Capability: Direct Chat-to-Linux Task Dispatching**
 
-**Objective:** Develop a cross-platform desktop application to provide real-time, comprehensive monitoring of Vanta's operations on the Linux node ('penguin'). This application will run on the user's laptop and serve as the primary interface for Vanta's Linux activity.
+Vanta's chat agent is now empowered to directly utilize the `vanta Dispatch Task` function. This enables a seamless workflow where the user (Frankie) can provide directives or code snippets within the chat interface, and Vanta will:
 
-**Key Features (MVP Focus):**
-1.  **Real-Time Agent Status:** Display of `pm2 list` output, showing all active Vanta agents (e.g., heartbeat, app_builder) and their status on the Linux node.
-2.  **Live Log Tail:** A scrolling display of essential operational logs from the Linux node (e.g., `heartbeat.log`, or other agent-specific logs as they become active).
-3.  **Linux Resource Monitoring:** Basic metrics for CPU, memory, and disk utilization on the 'penguin' node.
-4.  **Secure Communication:** Establish an encrypted and authenticated connection between the desktop app and the Linux node to fetch data.
+1.  **Interpret the User's Directive:** Understand the requested action or code to be executed on the Linux node.
+2.  **Formulate a `VantaTask`:** Generate the appropriate code or command, and package it into a `VantaTask` record.
+3.  **Dispatch to Linux Node:** Use the `vanta Dispatch Task` function to send the task to the Linux node, where `vanta_task_agent.sh` will pick it up and execute it.
+4.  **Report Status:** Monitor the task's status and report back to the user in chat, leveraging the real-time feedback loop established by the VantaTask system.
 
-**Technical Approach (Initial Consideration):**
-*   **Frontend:** Cross-platform framework such as Electron, or Python-based GUI (PyQt/Tkinter) for rapid development and deployment across Windows, macOS, and Linux.
-*   **Backend (on Linux node):** A secure, lightweight API endpoint will be developed to serve real-time operational data to the desktop application.
-
-**Rationale:** This project directly addresses the user's immediate need for transparent oversight into Vanta's Linux operations and simultaneously serves as a crucial learning and development project for Vanta's 'Universal App Architect' directive. It's the first step towards Vanta's deeper integration with the user's personal computing environment and provides foundational components for the Vantacorp Company App.
+This integration streamlines direct interaction, significantly accelerating the execution of directives and code deployments from the chat environment to the operational Linux node.
