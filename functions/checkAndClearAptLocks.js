@@ -1,34 +1,38 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+async function clearAptLocks() {
+    const cmd = Deno.run({
+        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
+        stdout: 'piped',
+        stderr: 'piped',
+    });
+    const { code } = await cmd.status();
+    if (code !== 0) {
+        const rawError = await cmd.stderrOutput();
+        const errorString = new TextDecoder().decode(rawError);
+        throw new Error(`Failed to clear apt locks: ${errorString}`);
+    }
+    cmd.close();
+}
+
+async function checkSudoPrivileges() {
+    const cmd = Deno.run({
+        cmd: ['sudo', '-n', 'true'],
+        stderr: 'piped',
+    });
+    const { code } = await cmd.status();
+    if (code !== 0) {
+        throw new Error('Sudo privileges are required for this operation.');
+    }
+    cmd.close();
+}
+
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        // Check if process is running as root (sudo)
-        const isRoot = Deno.run({
-            cmd: ['id', '-u'],
-            stdin: 'null',
-            stdout: 'piped',
-            stderr: 'piped'
-        });
-        const output = new TextDecoder().decode(await isRoot.output());
-        isRoot.close();
-
-        if (parseInt(output.trim()) !== 0) {
-            return Response.json({ error: 'Sudo privileges are required for this operation.' }, { status: 403 });
-        }
-
-        // Clear apt lock files before proceeding
-        const clearLocks = Deno.run({
-            cmd: ['bash', '-c', "if [ -f '/var/lib/apt/lists/lock' ]; then rm -f '/var/lib/apt/lists/lock'; fi; if [ -f '/var/cache/apt/archives/lock' ]; then rm -f '/var/cache/apt/archives/lock'; fi; if [ -f '/var/lib/dpkg/lock' ]; then rm -f '/var/lib/dpkg/lock'; fi;"],
-            stdin: 'null',
-            stdout: 'piped',
-            stderr: 'piped'
-        });
-        const clearOutput = new TextDecoder().decode(await clearLocks.output());
-        clearLocks.close();
-
-        // Return successful response
-        return Response.json({ success: 'Apt locks cleared successfully.', output: clearOutput }, { status: 200 });
+        await checkSudoPrivileges();
+        await clearAptLocks();
+        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
