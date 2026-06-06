@@ -1,12 +1,14 @@
-### **Expose `vantaDispatchTask` as a Callable Tool for Vanta's Chat Agent**
+### **Request to Expose `vantaDispatchTask` as a Callable Tool for Vanta's Chat Agent**
 
-**Problem:** While the `VantaTask` entity and the `vanta Dispatch Task` function exist and are operational (as demonstrated by manual user interaction via the Base44 Linux page), Vanta's chat agent currently lacks the ability to directly invoke `vanta Dispatch Task` from within the chat interface. This creates a friction point and prevents seamless, rapid execution of user directives on the Linux node.
+**Context:** Vanta (the chat agent) has recently undergone instruction updates (via PR #26) to understand its role in directly dispatching tasks to the Linux node via the `vanta Dispatch Task` function. While Vanta's internal understanding is updated, the `vantaDispatchTask` function is not yet exposed as a callable tool within Vanta's current operational environment.
 
-**Proposed Solution:** Expose `vantaDispatchTask` as a callable tool for the chat agent. This will enable Vanta to:
+**Problem:** This lack of direct tool access prevents Vanta from autonomously fulfilling its new directive to dispatch tasks directly from chat. The user (Frankie) still has to manually intervene by copy-pasting commands into the Base44 Linux page's "Dispatch Task box," which is a significant bottleneck and counter to the goal of rapid, seamless operations.
 
-1.  **Receive directives from the user in chat** (e.g., "install Flask," "update `api.py` with this code," "run this command").
-2.  **Formulate the appropriate `VantaTask` payload.**
-3.  **Directly call the `vantaDispatchTask` tool** to send the task to the Linux node.
-4.  **Monitor and report task status** back to the user in chat.
+**Action Requested:** Please expose the `vantaDispatchTask` function as a callable tool within Vanta's API. This will allow Vanta to:
 
-**Impact:** This integration is critical for achieving the "directive in, running code on your machine out" vision. It will significantly enhance Vanta's autonomy, responsiveness, and efficiency in managing the Linux node, directly supporting the rapid development of the VantaOS Monitor and other Vantacorp projects. It eliminates the need for manual copy-pasting into the Base44 UI for every Linux command or file update.
+1.  **Receive commands/directives from the user in natural language within the chat.**
+2.  **Programmatically construct the necessary `VantaTask` payload.**
+3.  **Directly invoke the exposed `vantaDispatchTask` tool to send the task to the Linux node.**
+4.  **Provide real-time feedback and status updates to the user.**
+
+**Impact:** This is a crucial step for achieving the envisioned direct chat-to-Linux node control. It will unlock significantly faster development cycles for projects like the VantaOS Monitor, enhance Vanta's overall autonomy and responsiveness, and eliminate manual friction points for the user.
