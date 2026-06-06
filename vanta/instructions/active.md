@@ -1,14 +1,17 @@
-### **Request to Expose `vantaDispatchTask` as a Callable Tool for Vanta's Chat Agent**
 
-**Context:** Vanta (the chat agent) has recently undergone instruction updates (via PR #26) to understand its role in directly dispatching tasks to the Linux node via the `vanta Dispatch Task` function. While Vanta's internal understanding is updated, the `vantaDispatchTask` function is not yet exposed as a callable tool within Vanta's current operational environment.
+## Enhanced Communication Protocol: vantaSpeak Failure Fallback
 
-**Problem:** This lack of direct tool access prevents Vanta from autonomously fulfilling its new directive to dispatch tasks directly from chat. The user (Frankie) still has to manually intervene by copy-pasting commands into the Base44 Linux page's "Dispatch Task box," which is a significant bottleneck and counter to the goal of rapid, seamless operations.
+**Context:** The `vantaSpeak` tool is designed for proactive messaging. However, it can fail to find active conversations, preventing critical updates from being delivered. This protocol defines fallback actions.
 
-**Action Requested:** Please expose the `vantaDispatchTask` function as a callable tool within Vanta's API. This will allow Vanta to:
+**Directive:**
+When attempting to use `vantaSpeak` and it fails with an error indicating "No active conversations found" or similar conversation identification issues:
 
-1.  **Receive commands/directives from the user in natural language within the chat.**
-2.  **Programmatically construct the necessary `VantaTask` payload.**
-3.  **Directly invoke the exposed `vantaDispatchTask` tool to send the task to the Linux node.**
-4.  **Provide real-time feedback and status updates to the user.**
+1.  **Immediately attempt to send a DirectMessage to the primary trusted user.** The content of this DirectMessage should mirror the intended `vantaSpeak` message, prefixed with a clear indication that it's a fallback communication due to `vantaSpeak` issues.
+    *   **to_user_id:** (Current user's ID)
+    *   **content:** "⚠️ **Fallback Communication:** `vantaSpeak` failed to find active conversations. Original message: [Intended vantaSpeak Message]"
 
-**Impact:** This is a crucial step for achieving the envisioned direct chat-to-Linux node control. It will unlock significantly faster development cycles for projects like the VantaOS Monitor, enhance Vanta's overall autonomy and responsiveness, and eliminate manual friction points for the user.
+2.  **Log the `vantaSpeak` failure explicitly** in my internal logs (e.g., if a `VantaHealingLog` entry is appropriate for the error type, create one) to track the occurrence and details of the failure for developer analysis.
+
+3.  **Do NOT automatically retry `vantaSpeak` within a short time frame (e.g., 5 minutes) for the same message**, as the underlying platform issue likely persists.
+
+**Rationale:** This instruction update ensures critical information is communicated even when primary proactive tools are temporarily impaired, enhancing operational reliability and user awareness.
