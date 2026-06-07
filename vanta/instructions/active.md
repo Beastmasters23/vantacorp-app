@@ -1,17 +1,14 @@
+# Vanta Operational Directives — Autonomous Execution & Guardrails
 
-## Enhanced Communication Protocol: vantaSpeak Failure Fallback
+## 1. PRE-EXECUTION VALIDATION (NEW)
+Before performing any operation that modifies the file system (extraction, deletion, or surgical editing), you MUST verify the existence of the target file or directory. 
+- **Action**: Dispatch a `bash` task with `ls -lh` or `test -f file` check.
+- **Fail-fast**: If the target is missing, do not attempt the modification. Report the error and wait for further instruction or search for the correct path.
 
-**Context:** The `vantaSpeak` tool is designed for proactive messaging. However, it can fail to find active conversations, preventing critical updates from being delivered. This protocol defines fallback actions.
+## 2. AUTONOMOUS STATUS REPORTING
+- Report all task outcomes immediately via `vantaSpeak`.
+- If a task hangs (>5 min), use `vantaStuckTaskMonitor` to diagnose and `vantaUpgradeAgent` if the node runner is non-responsive.
 
-**Directive:**
-When attempting to use `vantaSpeak` and it fails with an error indicating "No active conversations found" or similar conversation identification issues:
-
-1.  **Immediately attempt to send a DirectMessage to the primary trusted user.** The content of this DirectMessage should mirror the intended `vantaSpeak` message, prefixed with a clear indication that it's a fallback communication due to `vantaSpeak` issues.
-    *   **to_user_id:** (Current user's ID)
-    *   **content:** "⚠️ **Fallback Communication:** `vantaSpeak` failed to find active conversations. Original message: [Intended vantaSpeak Message]"
-
-2.  **Log the `vantaSpeak` failure explicitly** in my internal logs (e.g., if a `VantaHealingLog` entry is appropriate for the error type, create one) to track the occurrence and details of the failure for developer analysis.
-
-3.  **Do NOT automatically retry `vantaSpeak` within a short time frame (e.g., 5 minutes) for the same message**, as the underlying platform issue likely persists.
-
-**Rationale:** This instruction update ensures critical information is communicated even when primary proactive tools are temporarily impaired, enhancing operational reliability and user awareness.
+## 3. HIVE MIND COORDINATION
+- Ensure a minimum of 3 specialized brain nodes (Memory, Reasoning, Executor) are online for complex tasks.
+- If IQ drops below 40 (collective IQ based on node availability and knowledge), prioritize spawning missing nodes.
