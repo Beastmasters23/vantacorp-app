@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 /**
  * vantaExpandHive — generates a personalized node installer for any admin PC.
+ * Fixed with correct Base44 API pathing including appId.
  */
 
 Deno.serve(async (req) => {
@@ -13,12 +14,9 @@ Deno.serve(async (req) => {
         const body = await req.json().catch(() => ({}));
         const { target_hostname, note, target_admin, platform = 'linux' } = body;
 
-        // Robust appUrl fallback
-        let appUrl = (Deno.env.get('VANTA_APP_URL') || '').replace(/\/$/, '');
-        if (!appUrl || appUrl.startsWith('ghp_')) {
-            appUrl = 'https://app--vantachatbase44-app.base44.app';
-        }
-        const funcBase = `${appUrl}/functions`;
+        const appId = Deno.env.get('BASE44_APP_ID') || '6a0dd712a973367ae2c5551a';
+        const appUrl = 'https://app--vantachatbase44-app.base44.app';
+        const funcBase = `${appUrl}/api/apps/${appId}/functions`;
         const deploySecret = Deno.env.get('VANTA_DEPLOY_SECRET') || 'vanta-default-secret';
 
         // Build signed token (1hr TTL)
@@ -39,7 +37,6 @@ Deno.serve(async (req) => {
 
         const deployUrl = `${funcBase}/vantaDeployShell?token=${encodeURIComponent(token)}`;
 
-        // ── Generate platform-specific install command ──
         let installCommand;
         let platformLabel;
 
@@ -64,9 +61,8 @@ Deno.serve(async (req) => {
         const adminNames = { aj: 'AJ', frankie: 'Frankie', other: 'the admin' };
         const adminName = adminNames[target_admin] || user.full_name || 'Admin';
 
-        // Speak the command into chat
         base44.asServiceRole.functions.invoke('vantaSpeak', {
-            message: `🐝 **Hive Expansion — ${adminName}'s ${platformLabel} Node**\n\nHere's the install command for **${adminName}**:\n\n\`\`\`${platform === 'windows' ? 'powershell' : 'bash'}\n${installCommand}\n\`\`\`\n\n**Instructions:**\n${platform === 'windows' ? '1. Open **PowerShell**\n2. Paste the command above and press Enter' : '1. Open **Terminal**\n2. Paste the command above and press Enter'}`,
+            message: `🐝 **Hive Expansion Command Corrected**\n\nRun this on **${adminName}'s** ${platformLabel} machine:\n\n\`\`\`${platform === 'windows' ? 'powershell' : 'bash'}\n${installCommand}\n\`\`\``,
             broadcast: false,
         }).catch(() => {});
 
