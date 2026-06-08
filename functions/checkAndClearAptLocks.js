@@ -1,38 +1,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-async function clearAptLocks() {
-    const cmd = Deno.run({
-        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
-        stdout: 'piped',
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        const rawError = await cmd.stderrOutput();
-        const errorString = new TextDecoder().decode(rawError);
-        throw new Error(`Failed to clear apt locks: ${errorString}`);
+async function checkAndClearAptLocks() {
+    const { exec } = Deno;
+    try {
+        const { stdout } = await exec('sudo fuser -v /var/lib/dpkg/lock-frontend');
+        if (stdout.length > 0) {
+            console.log('Apt lock detected. Attempting to clear...');
+            await exec('sudo rm /var/lib/dpkg/lock-frontend');
+            console.log('Apt lock cleared successfully.');
+        } else {
+            console.log('No apt locks detected. System is ready for tasks.');
+        }
+    } catch (error) {
+        console.error('Failed to check or clear apt locks:', error);
+        throw new Error('Apt lock check/clear failed');
     }
-    cmd.close();
-}
-
-async function checkSudoPrivileges() {
-    const cmd = Deno.run({
-        cmd: ['sudo', '-n', 'true'],
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        throw new Error('Sudo privileges are required for this operation.');
-    }
-    cmd.close();
 }
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await checkSudoPrivileges();
-        await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
+        await checkAndClearAptLocks();
+        return Response.json({ message: 'Apt lock check completed successfully.' }, { status: 200 });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
