@@ -1,34 +1,29 @@
 #!/bin/bash
 
-# Proactive Resource Usage Monitor with Auto-Remediation
+# Proactive Resource Monitor and Auto-Remediation Script
 
-THRESHOLD_CPU=80
-THRESHOLD_MEM=80
+# Configuration
+CPU_THRESHOLD=90  # CPU usage threshold percentage
+DISK_THRESHOLD=90  # Disk usage threshold percentage
 
 # Function to check CPU usage
-check_cpu() {
-  CPU_USAGE=$(top -bn1 | grep 'Cpu(s)' | sed "s/.*, *\\([0-9.]*\)%* id.*/\\1/" | awk '{print 100 - $1}')
-  if (( $(echo "$CPU_USAGE > $THRESHOLD_CPU" | bc -l) )); then
-    echo "High CPU usage detected: $CPU_USAGE%"
-    # Your remediation action here
-    echo "Restarting resource-intensive processes..."
-  fi
+check_cpu_usage() {
+    local CPU_USAGE=$(top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\) id.*/\\1/' | awk '{print 100 - $1}')
+    if (( $(echo "$CPU_USAGE > $CPU_THRESHOLD" | bc -l) )); then
+        echo "High CPU usage detected: ${CPU_USAGE}%";
+        # Possible remediation action could be added here
+    fi
 }
 
-# Function to check Memory usage
-check_mem() {
-  MEM_USAGE=$(free | grep Mem | awk '{print $3/$2 * 100.0}')
-  if (( $(echo "$MEM_USAGE > $THRESHOLD_MEM" | bc -l) )); then
-    echo "High memory usage detected: $MEM_USAGE%"
-    # Your remediation action here
-    echo "Clearing cache..."
-    sudo sync; sudo echo 3 > /proc/sys/vm/drop_caches
-  fi
+# Function to check disk usage
+check_disk_usage() {
+    local DISK_USAGE=$(df / | grep / | awk '{print $5}' | sed 's/%//g')
+    if [ $DISK_USAGE -gt $DISK_THRESHOLD ]; then
+        echo "High disk usage detected: ${DISK_USAGE}%";
+        # Possible cleanup actions could be initiated here
+    fi
 }
 
-# Main monitoring loop
-while true; do
-  check_cpu
-  check_mem
-  sleep 60 # Check every minute
-done
+# Main Execution
+check_cpu_usage
+check_disk_usage
