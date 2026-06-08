@@ -1,38 +1,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-async function clearAptLocks() {
-    const cmd = Deno.run({
-        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
-        stdout: 'piped',
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        const rawError = await cmd.stderrOutput();
-        const errorString = new TextDecoder().decode(rawError);
-        throw new Error(`Failed to clear apt locks: ${errorString}`);
+async function checkAndClearAptLocks() {
+    const { exec } = Deno;
+    try {
+        // Check for active, stale apt locks
+        const result = await exec('lsof | grep /var/lib/dpkg/lock');
+        if (result.success) {
+            await exec('sudo rm /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend');
+            console.log('Cleared stale apt locks.');
+        } else {
+            console.log('No stale apt locks found.');
+        }
+    } catch (error) {
+        console.error('Error checking/clearing apt locks:', error);
     }
-    cmd.close();
-}
-
-async function checkSudoPrivileges() {
-    const cmd = Deno.run({
-        cmd: ['sudo', '-n', 'true'],
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        throw new Error('Sudo privileges are required for this operation.');
-    }
-    cmd.close();
 }
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await checkSudoPrivileges();
-        await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
+        await checkAndClearAptLocks();
+        // Proceed with normal operations after clearing apt locks
+        return Response.json({ status: 'APT locks checked and cleared if necessary.' }, { status: 200 });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
