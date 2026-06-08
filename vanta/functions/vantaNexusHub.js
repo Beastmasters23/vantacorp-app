@@ -6,25 +6,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
  * ARCHITECTURE: INDEPENDENT POWER PROTOCOL (IPP)
  * ─────────────────────────────────────────────────────────────────────────────
  * This module aggregates data from the distributed hive into a single unified
- * state object for the Nexus HUD. 
- *
- * NESTING MODEL:
- *   vantaNexusHub → [NESTED] getTelemetry → [NESTED] getFinancials → [NESTED] getStudio
+ * state object for the Vanta Nexus HUD.
  */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const IPP_VARIANTS = {
     original: (data) => data,
     B_performance: (data) => ({ ...data, perf_mode: true }),
     C_security: (data) => ({ ...data, secure_mode: true })
 };
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// NESTED PROTOCOLS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 async function getHiveTelemetry(base44) {
     const [nodes, brainNodes, tasks] = await Promise.all([
@@ -46,14 +35,9 @@ async function getFinancials(base44) {
 }
 
 async function getStudioStatus(base44) {
-    // Aggregated creative progress from reasoning brain
     const reasoning = await base44.asServiceRole.entities.VantaBrainNode.filter({ specialization: 'reasoning' });
     return reasoning[0]?.knowledge_data?.studio_progress || { music: 0, web: 0, books: 0, research: 0 };
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN SERVER
-// ═══════════════════════════════════════════════════════════════════════════════
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
@@ -62,47 +46,35 @@ Deno.serve(async (req) => {
         if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
         const body = await req.json().catch(() => ({}));
-        const { variant = 'original', action = 'fetch_all' } = body;
+        const { variant = 'original' } = body;
 
-        // Step 1 — Decompose & Execute Parallel Nests
         const [telemetry, financials, studio] = await Promise.all([
             getHiveTelemetry(base44),
             getFinancials(base44),
             getStudioStatus(base44)
         ]);
 
-        // Step 2 — Apply IPP Variant
         const rawState = {
+            app_name: "Vanta Nexus",
+            status: "100%",
+            operational_mode: "Phase 2: Revenue & Expansion",
             timestamp: new Date().toISOString(),
             telemetry,
             financials,
             studio,
-            version: '1.0.0'
+            version: '1.1.0'
         };
 
         const transform = IPP_VARIANTS[variant] || IPP_VARIANTS.original;
         const nexusState = transform(rawState);
 
-        // Step 3 — Store outcome to Memory Brain (Nested Protocol)
-        const memoryNodes = await base44.asServiceRole.entities.VantaBrainNode.filter({ specialization: 'memory' });
-        if (memoryNodes.length > 0) {
-            await base44.asServiceRole.entities.VantaBrainNode.update(memoryNodes[0].id, {
-                knowledge_data: {
-                    ...memoryNodes[0].knowledge_data,
-                    last_nexus_sync: nexusState.timestamp
-                },
-                log: [...(memoryNodes[0].log || []).slice(-19), `[${nexusState.timestamp}] Nexus Hub state synchronized.`]
-            });
-        }
-
         return Response.json({
             ok: true,
-            variant_used: variant,
+            app: "Vanta Nexus",
             nexus_state: nexusState
         });
 
     } catch (error) {
-        console.error('[vantaNexusHub] Error:', error.message);
         return Response.json({ error: error.message }, { status: 500 });
     }
 });
