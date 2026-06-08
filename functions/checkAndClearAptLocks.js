@@ -1,38 +1,30 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-async function clearAptLocks() {
-    const cmd = Deno.run({
-        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
-        stdout: 'piped',
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        const rawError = await cmd.stderrOutput();
-        const errorString = new TextDecoder().decode(rawError);
-        throw new Error(`Failed to clear apt locks: ${errorString}`);
+async function checkAndClearAptLocks() {
+    const lockFilePath = '/var/lib/dpkg/lock';
+    const fs = Deno;
+    try {
+        const fileInfo = await fs.stat(lockFilePath);
+        if (fileInfo.isFile) {
+            console.log('APT lock file exists, attempting to remove it.');
+            await fs.remove(lockFilePath);
+            console.log('APT lock file cleared.');
+        }
+    } catch (error) {
+        if (error instanceof Deno.errors.NotFound) {
+            console.log('No APT lock file detected, proceeding normally.');
+        } else {
+            throw new Error(`Failed to check or clear APT lock: ${error.message}`);
+        }
     }
-    cmd.close();
-}
-
-async function checkSudoPrivileges() {
-    const cmd = Deno.run({
-        cmd: ['sudo', '-n', 'true'],
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        throw new Error('Sudo privileges are required for this operation.');
-    }
-    cmd.close();
 }
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await checkSudoPrivileges();
-        await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
+        await checkAndClearAptLocks();
+        // Your existing task execution logic here
+        return Response.json({ success: true }, { status: 200 });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
