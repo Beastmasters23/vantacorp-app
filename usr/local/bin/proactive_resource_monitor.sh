@@ -1,24 +1,36 @@
 #!/bin/bash
 
-# Proactive Resource Monitor Script
+# Proactive Resource Monitoring and Auto-Remediation Script
 
-# Check CPU Usage
-cpu_usage=$(top -bn1 | grep 'Cpu(s)' | sed "s/.*, *\\([0-9.]*\)%* id.*/\\1/" | awk '{print 100 - $1}')
-if (( $(echo "$cpu_usage > 80" | bc -l) )); then
-    echo "High CPU usage detected: $cpu_usage%"
-    # Add auto-remediation logic here
-fi
+# Function to check CPU usage
+check_cpu_usage() {
+  CPU_USAGE=$(top -bn1 | grep 'Cpu(s)' | sed "s/.*, *\\(.*%\).*;/\1/"
+  if (( $(echo "$CPU_USAGE > 80" |bc -l) )); then
+    echo "High CPU usage detected: $CPU_USAGE%"
+    # Auto-remediate: Kill the top CPU-consuming process
+    TOP_PROCESS=$(ps -eo pid,comm,pcpu --sort=-pcpu | awk 'NR==2 {print $1}')
+    echo "Killing process $TOP_PROCESS to free resources..."
+    kill -9 $TOP_PROCESS
+  fi
+}
 
-# Check Disk Usage
-disk_usage=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
-if [ $disk_usage -gt 90 ]; then
-    echo "Disk usage is critically high: $disk_usage%"
-    # Add auto-remediation logic here
-fi
+# Function to check disk usage
+check_disk_usage() {
+  DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
+  if [ "$DISK_USAGE" -gt 90 ]; then
+    echo "High disk usage detected: $DISK_USAGE%"
+    # Auto-remediate: Cleanup old logs
+    echo "Cleaning up old logs..."
+    find /var/log -name '*.log' -type f -mtime +30 -exec rm -f {} \;
+  fi
+}
 
-# Check if any essential service is down
-service_status=$(systemctl is-active my_essential_service)
-if [ "$service_status" != "active" ]; then
-    echo "Essential service is down! Attempting restart..."
-    systemctl restart my_essential_service
-fi
+# Main monitoring function
+monitor_resources() {
+  echo "Monitoring system resources..."
+  check_cpu_usage
+  check_disk_usage
+}
+
+# Run the resource monitoring function
+monitor_resources
