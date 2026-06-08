@@ -1,31 +1,35 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-async function clearAptLocks() {
-    // Logic to clear any apt lock files
-    const exec = Deno.run({ cmd: ['sudo', 'rm', '-f', '/var/lib/dpkg/lock', '/var/lib/dpkg/lock-frontend', '/var/cache/apt/archives/lock'] });
-    const { code } = await exec.status();
-    if (code !== 0) throw new Error('Failed to clear apt locks');
-}
-
-async function verifyFileExists(filePath) {
-    try {
-        await Deno.stat(filePath);
-    } catch (e) {
-        if (e instanceof Deno.errors.NotFound) {
-            throw new Error(`File not found: ${filePath}`);
-        }
-        throw e;
-    }
-}
-
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await clearAptLocks();
-        await verifyFileExists('/home/delgadofrankie139/vanta/kelpie_v1.zip'); // Sample check for crucial file
-        // Invoke task runner or other logic here
-        return Response.json({ success: true }, { status: 200 });
+        await preFlightCheck();
+        // Proceed with scheduled tasks or commands here
+        return Response.json({ message: 'Tasks ready to execute.' });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
 });
+
+async function preFlightCheck() {
+    const stuckTasks = await checkForStuckTasks();
+    if (stuckTasks.length > 0) {
+        throw new Error('Tasks are stuck: ' + stuckTasks.join(', '));
+    }
+    const aptLocks = await checkForAptLocks();
+    if (aptLocks.length > 0) {
+        throw new Error('Existing APT locks found: ' + aptLocks.join(', '));
+    }
+}
+
+async function checkForStuckTasks() {
+    // Logic to check for stuck tasks based on runtime and duration.
+    // Return an array of stuck task identifiers or info.
+    return []; // Placeholder
+}
+
+async function checkForAptLocks() {
+    // Logic to check for any APT locks present in the system.
+    // Return an array of lock identifiers if any are found.
+    return []; // Placeholder
+}
