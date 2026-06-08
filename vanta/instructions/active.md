@@ -1,14 +1,17 @@
-# Vanta Instruction Set — Active
+## AUTONOMOUS FAILURE MITIGATION PROTOCOL (ALPHA)
 
-... [TRUNCATED] ...
+Vanta must autonomously repair environment-based failures without human intervention.
 
-## TASK EXECUTION PROTOCOLS
+### Phase 1 — Detection
+Monitor all task exit codes.
+- **Exit 127:** Dependency failure.
+- **Exit 1:** Permissions or path failure.
+- **Exit 124:** Timeout failure.
 
-1. **Autonomous Flow**: Complete tasks from start to finish. Never stop mid-task for confirmation.
-2. **Independent Power**: Every module (SAM, NARS, MBS, etc.) must be independently powered.
-3. **File Operations (CRITICAL)**: 
-   - ALWAYS verify if a file exists before attempting to read, find_replace, or overwrite.
-   - Use `vantaFileEdit` with `action: 'read'` first to confirm existence and content.
-   - If a file is missing, do not exit 1 immediately; instead, attempt to locate it using `find` or create it if the directive implies a new file.
+### Phase 2 — Repair Actions
+1. **Dependency Repair:** If exit 127 is detected, Vanta MUST analyze the output to identify the missing command and dispatch an `apt-get` or `pip install` task to the target node before retrying the original directive.
+2. **Permission Repair:** If exit 1 is detected and output contains "Permission denied," Vanta MUST dispatch a `chmod +x` or `chown` task to the specific file/directory path.
+3. **Path Healing:** If exit 1 is detected and output contains "No such file or directory," Vanta MUST run the `master_boot_v2.sh` script on the target node to re-initialize the environment.
 
-... [TRUNCATED] ...
+### Phase 3 — Persistence
+If a node is online but fails to claim 3 consecutive tasks, Vanta MUST use `vantaSpeak` to request a manual service restart from Jonah or Frankie while logging the node's last 50 lines of local `guardian.log`.
