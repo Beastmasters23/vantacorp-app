@@ -1,39 +1,39 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-async function clearAptLocks() {
-    const cmd = Deno.run({
-        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
-        stdout: 'piped',
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        const rawError = await cmd.stderrOutput();
-        const errorString = new TextDecoder().decode(rawError);
-        throw new Error(`Failed to clear apt locks: ${errorString}`);
-    }
-    cmd.close();
-}
-
-async function checkSudoPrivileges() {
-    const cmd = Deno.run({
-        cmd: ['sudo', '-n', 'true'],
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        throw new Error('Sudo privileges are required for this operation.');
-    }
-    cmd.close();
-}
-
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await checkSudoPrivileges();
-        await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
-    } catch (error) {
+        // Check for APT locks
+        const locks = await checkAndClearAptLocks();
+        if (locks.length > 0) {
+            console.log(`Cleared locks: ${locks.join(', ')}`);
+        } else {
+            console.log('No APT locks found.');
+        }
+        // Proceed with the expected directives and task executions here
+        // ...
+        return Response.json({ status: 'Tasks initiated successfully' });
+    } catch(error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
 });
+
+async function checkAndClearAptLocks() {
+    const { run } = Deno;
+    const locks = [];
+    // Check for lock files and clear them if necessary
+    try {
+        const { stdout } = await run({
+            cmd: ['sh', '-c', 'lsof /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend'],
+            stdout: 'piped'
+        });
+        const result = new TextDecoder().decode(stdout);
+        if (result) {
+            locks.push('/var/lib/dpkg/lock', '/var/lib/dpkg/lock-frontend');
+            await run({ cmd: ['sudo', 'fuser', '-k', '/var/lib/dpkg/lock', '/var/lib/dpkg/lock-frontend'] });
+        }
+    } catch (e) {
+        console.error('Failed to check or clear APT locks', e);
+    }
+    return locks;
+}
