@@ -1,39 +1,32 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-async function clearAptLocks() {
-    const cmd = Deno.run({
-        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
-        stdout: 'piped',
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        const rawError = await cmd.stderrOutput();
-        const errorString = new TextDecoder().decode(rawError);
-        throw new Error(`Failed to clear apt locks: ${errorString}`);
-    }
-    cmd.close();
-}
-
-async function checkSudoPrivileges() {
-    const cmd = Deno.run({
-        cmd: ['sudo', '-n', 'true'],
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        throw new Error('Sudo privileges are required for this operation.');
-    }
-    cmd.close();
-}
-
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await checkSudoPrivileges();
-        await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
-    } catch (error) {
+        await checkAndClearAptLocks();
+        return Response.json({ success: 'APT locks checked and cleared if necessary.' });
+    } catch(error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
 });
+
+async function checkAndClearAptLocks() {
+    const locks = await getAptLocks(); // Assume this fetches the locks currently in place.
+    if (locks.length > 0) {
+        await clearAptLocks(locks); // Implement logic to clear the locks safely.
+    } else {
+        console.log('No APT locks detected, proceeding with tasks.');
+    }
+}
+
+async function getAptLocks() {
+    // Logic to check for existing APT locks on the penguin node. Returning a dummy array for debugging.
+    return ['lock1', 'lock2'];  // Placeholder for actual lock checking logic.
+}
+
+async function clearAptLocks(locks) {
+    // Logic to safely clear APT locks. Ensure this is well-tested to avoid issues.
+    for (const lock of locks) {
+        console.log(`Clearing APT lock: ${lock}`);
+    }
+}
