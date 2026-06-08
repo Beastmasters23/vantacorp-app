@@ -1,0 +1,23 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { exec } from "https://deno.land/x/exec/mod.ts";
+
+async function clearAptLocks() {
+    try {
+        await exec("sudo rm -f /var/lib/dpkg/lock-frontend");
+        await exec("sudo rm -f /var/lib/dpkg/lock");
+        await exec("sudo rm -f /var/cache/apt/archives/lock");
+    } catch (error) {
+        console.error('Error clearing apt locks:', error);
+        throw new Error('Failed to clear apt locks');
+    }
+}
+
+Deno.serve(async (req) => {
+    const base44 = createClientFromRequest(req);
+    try {
+        await clearAptLocks();
+        return Response.json({ message: 'Apt locks cleared successfully' });
+    } catch(error) {
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});
