@@ -1,34 +1,33 @@
 #!/bin/bash
 
-# Proactive Resource Usage Monitor with Auto-Remediation
+# Proactive Resource Monitoring Script
+# Monitors CPU and Disk Usage
+# If usage exceeds thresholds, sends an alert and attempts to free resources
 
-THRESHOLD_CPU=80
-THRESHOLD_MEM=80
+CPU_THRESHOLD=80
+DISK_THRESHOLD=90
+ALERT_EMAIL="admin@example.com"
 
 # Function to check CPU usage
 check_cpu() {
-  CPU_USAGE=$(top -bn1 | grep 'Cpu(s)' | sed "s/.*, *\\([0-9.]*\)%* id.*/\\1/" | awk '{print 100 - $1}')
-  if (( $(echo "$CPU_USAGE > $THRESHOLD_CPU" | bc -l) )); then
-    echo "High CPU usage detected: $CPU_USAGE%"
-    # Your remediation action here
-    echo "Restarting resource-intensive processes..."
-  fi
+    CPU_USAGE=$(mpstat | awk 'NR==4 {print $3}')
+    if (( $(echo "$CPU_USAGE > $CPU_THRESHOLD" | bc -l) )); then
+        echo "High CPU usage detected: $CPU_USAGE%" | mail -s "CPU Alert" $ALERT_EMAIL
+        # Attempt to free resources
+        kill -9 $(ps aux --sort=-%cpu | awk 'NR>1 {print $2}' | head -n 5)
+    fi
 }
 
-# Function to check Memory usage
-check_mem() {
-  MEM_USAGE=$(free | grep Mem | awk '{print $3/$2 * 100.0}')
-  if (( $(echo "$MEM_USAGE > $THRESHOLD_MEM" | bc -l) )); then
-    echo "High memory usage detected: $MEM_USAGE%"
-    # Your remediation action here
-    echo "Clearing cache..."
-    sudo sync; sudo echo 3 > /proc/sys/vm/drop_caches
-  fi
+# Function to check Disk usage
+check_disk() {
+    DISK_USAGE=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+    if (( DISK_USAGE > DISK_THRESHOLD )); then
+        echo "High Disk usage detected: $DISK_USAGE%" | mail -s "Disk Alert" $ALERT_EMAIL
+        # Attempt to clean up
+        find /tmp -type f -mtime +10 -exec rm {} \;
+    fi
 }
 
-# Main monitoring loop
-while true; do
-  check_cpu
-  check_mem
-  sleep 60 # Check every minute
-done
+# Run checks
+check_cpu
+check_disk
