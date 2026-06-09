@@ -1,31 +1,35 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 async function clearAptLocks() {
-    // Logic to clear any apt lock files
-    const exec = Deno.run({ cmd: ['sudo', 'rm', '-f', '/var/lib/dpkg/lock', '/var/lib/dpkg/lock-frontend', '/var/cache/apt/archives/lock'] });
-    const { code } = await exec.status();
-    if (code !== 0) throw new Error('Failed to clear apt locks');
+    try {
+        await Deno.run({ cmd: ['sudo', 'apt-get', 'clean'] }).status();
+        await Deno.run({ cmd: ['sudo', 'apt-get', 'update'] }).status();
+    } catch (error) {
+        console.error('Failed to clear APT locks:', error);
+    }
 }
 
-async function verifyFileExists(filePath) {
-    try {
-        await Deno.stat(filePath);
-    } catch (e) {
-        if (e instanceof Deno.errors.NotFound) {
-            throw new Error(`File not found: ${filePath}`);
+async function checkCommandAvailability(commands) {
+    for (const command of commands) {
+        const status = await Deno.run({ cmd: ['which', command] }).status();
+        if (status.code !== 0) {
+            console.error(`Command not found: ${command}`);
+            return false;
         }
-        throw e;
     }
+    return true;
 }
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
-    try {
-        await clearAptLocks();
-        await verifyFileExists('/home/delgadofrankie139/vanta/kelpie_v1.zip'); // Sample check for crucial file
-        // Invoke task runner or other logic here
-        return Response.json({ success: true }, { status: 200 });
-    } catch (error) {
-        return Response.json({ error: error.message }, { status: 500 });
+    const commands = ['cat', 'grep', 'curl']; // Add other essential commands here
+
+    await clearAptLocks();
+    const areCommandsAvailable = await checkCommandAvailability(commands);
+    if (!areCommandsAvailable) {
+        return Response.json({ error: 'Essential commands are not available.' }, { status: 500 });
     }
+
+    // Proceed with task execution
+    return Response.json({ message: 'Pre-flight check passed. Task can proceed.' });
 });
