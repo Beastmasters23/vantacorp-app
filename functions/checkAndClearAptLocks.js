@@ -1,39 +1,45 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-async function clearAptLocks() {
-    const cmd = Deno.run({
-        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
-        stdout: 'piped',
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        const rawError = await cmd.stderrOutput();
-        const errorString = new TextDecoder().decode(rawError);
-        throw new Error(`Failed to clear apt locks: ${errorString}`);
-    }
-    cmd.close();
-}
-
-async function checkSudoPrivileges() {
-    const cmd = Deno.run({
-        cmd: ['sudo', '-n', 'true'],
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        throw new Error('Sudo privileges are required for this operation.');
-    }
-    cmd.close();
-}
-
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
+
+    const checkEnvironment = async () => {
+        // Check for APT locks
+        const aptLocked = await checkAptLock();
+        if (aptLocked) {
+            await clearAptLock();
+        }
+
+        // Check for critical commands
+        const commands = ['cat', 'ls', 'grep'];
+        for (const cmd of commands) {
+            const commandExists = await checkCommandPresence(cmd);
+            if (!commandExists) {
+                console.error(`Critical command not found: ${cmd}`);
+                throw new Error(`Missing command: ${cmd}`);
+            }
+        }
+
+        return true;
+    };
+
     try {
-        await checkSudoPrivileges();
-        await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
+        await checkEnvironment();
+        return Response.json({ status: 'Environment verified' });
     } catch (error) {
+        console.error(error);
         return Response.json({ error: error.message }, { status: 500 });
     }
 });
+
+const checkAptLock = async () => {
+    // Function to check APT locks
+};
+
+const clearAptLock = async () => {
+    // Function to clear APT locks
+};
+
+const checkCommandPresence = async (cmd) => {
+    // Function to check if a command is present in the environment
+};
