@@ -1,24 +1,40 @@
 #!/bin/bash
 
-# Proactive Resource Monitor Script
+# Proactive Resource Monitor
 
-# Check CPU Usage
-cpu_usage=$(top -bn1 | grep 'Cpu(s)' | sed "s/.*, *\\([0-9.]*\)%* id.*/\\1/" | awk '{print 100 - $1}')
-if (( $(echo "$cpu_usage > 80" | bc -l) )); then
-    echo "High CPU usage detected: $cpu_usage%"
-    # Add auto-remediation logic here
-fi
+# Function to check CPU usage
+check_cpu() {
+    local cpu_usage=$(top -bn1 | grep 'Cpu(s)' | sed "s/.*, *//;s/%.*//")
+    if (( $(echo "$cpu_usage > 80" | bc -l) )); then
+        echo "High CPU usage detected: ${cpu_usage}%"
+        # Here, you could implement an auto-remediation action
+    fi
+}
 
-# Check Disk Usage
-disk_usage=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
-if [ $disk_usage -gt 90 ]; then
-    echo "Disk usage is critically high: $disk_usage%"
-    # Add auto-remediation logic here
-fi
+# Function to check disk space
+check_disk() {
+    local disk_usage=$(df / | grep / | awk '{ print $5 }' | sed 's/%//g')
+    if [ "$disk_usage" -gt 90 ]; then
+        echo "Disk space critical: ${disk_usage}%"
+        # Here, auto-remediation could involve alerting or cleaning up
+    fi
+}
 
-# Check if any essential service is down
-service_status=$(systemctl is-active my_essential_service)
-if [ "$service_status" != "active" ]; then
-    echo "Essential service is down! Attempting restart..."
-    systemctl restart my_essential_service
-fi
+# Function to check service status
+check_services() {
+    local services=(
+        "nginx"
+        "mysql"
+    )
+    for service in "${services[@]}"; do
+        if ! systemctl is-active --quiet $service; then
+            echo "$service is down!"
+            # Here, you could add a restart command or alert
+        fi
+    done
+}
+
+# Execute checks
+check_cpu
+check_disk
+check_services
