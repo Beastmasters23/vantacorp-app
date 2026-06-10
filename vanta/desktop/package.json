@@ -1,0 +1,20 @@
+{
+  "name": "vanta-omni-link",
+  "version": "1.0.0",
+  "description": "Unified Sovereign Desktop App for Vanta Hive Architects",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "electron": "^31.0.0",
+    "sqlite3": "^5.1.7",
+    "axios": "^1.7.2"
+  },
+  "vanta_metadata": {
+    "module": "OMNI-LINK",
+    "author": "Vanta + Lyra Nova",
+    "protocol": "SCLP-NESTED"
+  }
+}
