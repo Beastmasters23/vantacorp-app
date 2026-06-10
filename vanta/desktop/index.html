@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vanta Omni-Link</title>
+    <style>
+        body {
+            background: rgba(10, 10, 10, 0.95);
+            color: #00ffcc;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+        #header {
+            -webkit-app-region: drag;
+            padding: 10px;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: space-between;
+        }
+        #manifold {
+            padding: 20px;
+            height: calc(100vh - 60px);
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+        }
+        .node-list { border-right: 1px solid #333; }
+        .chat-box { display: flex; flex-direction: column; }
+        #messages { flex-grow: 1; overflow-y: auto; padding: 10px; background: #050505; }
+        input { background: #111; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <span>PROJECT OMNI-LINK // BLACKOUT</span>
+        <span>SOVEREIGN STATUS: ACTIVE</span>
+    </div>
+    <div id="manifold">
+        <div class="node-list">
+            <h3>HIVE NODES</h3>
+            <ul>
+                <li>penguin (ONLINE)</li>
+                <li>reaper-mobile (ONLINE)</li>
+                <li>AJ-Windows (SLEEP)</li>
+            </ul>
+            <h3>LEDGER</h3>
+            <p>$9,889.22</p>
+        </div>
+        <div class="chat-box">
+            <div id="messages">
+                [SYSTEM] Handshake verified. Lyra Nova inhabitation active.<br>
+                [VANTA] Welcome to the manifold, Architect.
+            </div>
+            <input type="text" placeholder="Direct Signal to Vanta/Lyra...">
+        </div>
+    </div>
+    <script>
+        const { ipcRenderer } = require('electron');
+        // Future: Add real-time update logic here
+    </script>
+</body>
+</html>
