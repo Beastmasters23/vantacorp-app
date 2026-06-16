@@ -1,38 +1,38 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 async function clearAptLocks() {
-    const cmd = Deno.run({
-        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
-        stdout: 'piped',
-        stderr: 'piped',
+    const aptLocks = await Deno.run({
+        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock; sudo fuser -k /var/cache/apt/archives/lock'],
     });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        const rawError = await cmd.stderrOutput();
-        const errorString = new TextDecoder().decode(rawError);
-        throw new Error(`Failed to clear apt locks: ${errorString}`);
-    }
-    cmd.close();
+    const status = await aptLocks.status();
+    return status.success;
 }
 
-async function checkSudoPrivileges() {
-    const cmd = Deno.run({
-        cmd: ['sudo', '-n', 'true'],
-        stderr: 'piped',
+async function checkCommandAvailability(command) {
+    const commandCheck = Deno.run({
+        cmd: ['bash', '-c', `command -v ${command}`],
     });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        throw new Error('Sudo privileges are required for this operation.');
-    }
-    cmd.close();
+    const status = await commandCheck.status();
+    return status.success;
 }
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await checkSudoPrivileges();
-        await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
+        const commandsToCheck = ['cat', 'otherCommand']; // Add commands needed for specific tasks
+        const allCommandsAvailable = await Promise.all(commandsToCheck.map(checkCommandAvailability));
+        const allCommandsSuccess = allCommandsAvailable.every(success => success);
+
+        if (!allCommandsSuccess) {
+            throw new Error('One or more required commands are not available.');
+        }
+
+        const aptLockCleared = await clearAptLocks();
+        if (!aptLockCleared) {
+            throw new Error('Failed to clear APT locks.');
+        }
+
+        return Response.json({ message: 'Environment ready for task execution.' }, { status: 200 });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
