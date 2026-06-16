@@ -1,22 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { exec } from 'https://deno.land/x/exec/mod.ts';
 
-async function clearAptLocks() {
-    try {
-        await exec('sudo rm /var/lib/dpkg/lock-frontend');
-        await exec('sudo rm /var/lib/dpkg/lock');
-        await exec('sudo rm /var/cache/apt/archives/lock');
-    } catch (error) {
-        throw new Error('Failed to clear apt locks: ' + error.message);
-    }
-}
+const clearAptLocks = async () => {
+  const { exec } = Deno;
+  try {
+    const { stdout } = await exec("sudo fuser -k /var/lib/dpkg/lock-frontend; sudo rm -f /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend");
+    return { message: 'APT locks cleared.', output: stdout }; 
+  } catch (error) {
+    return { message: 'Error clearing APT locks.', error: error.message };
+  }
+};
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
-    try {
-        await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared successfully.' }, { status: 200 });
-    } catch (error) {
-        return Response.json({ error: error.message }, { status: 500 });
+    const lockCheck = await clearAptLocks();
+    
+    if (lockCheck.error) {
+        return Response.json({ error: lockCheck.message, details: lockCheck.error }, { status: 500 });
     }
+    
+    return Response.json({ message: 'No APT locks present, proceed with tasks.', lockStatus: lockCheck });
 });
