@@ -1,31 +1,47 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-async function clearAptLocks() {
-    // Logic to clear any apt lock files
-    const exec = Deno.run({ cmd: ['sudo', 'rm', '-f', '/var/lib/dpkg/lock', '/var/lib/dpkg/lock-frontend', '/var/cache/apt/archives/lock'] });
-    const { code } = await exec.status();
-    if (code !== 0) throw new Error('Failed to clear apt locks');
-}
-
-async function verifyFileExists(filePath) {
-    try {
-        await Deno.stat(filePath);
-    } catch (e) {
-        if (e instanceof Deno.errors.NotFound) {
-            throw new Error(`File not found: ${filePath}`);
-        }
-        throw e;
-    }
-}
-
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
-    try {
-        await clearAptLocks();
-        await verifyFileExists('/home/delgadofrankie139/vanta/kelpie_v1.zip'); // Sample check for crucial file
-        // Invoke task runner or other logic here
-        return Response.json({ success: true }, { status: 200 });
-    } catch (error) {
-        return Response.json({ error: error.message }, { status: 500 });
+    const requiredCommands = ['cat', 'echo', 'ls'];
+    const lockCheck = await checkForAPTLocks();
+    
+    if (lockCheck) {
+        return Response.json({ error: 'APT locks are present. Cannot execute tasks.' }, { status: 503 });
     }
+    
+    const missingCommands = await checkCommandAvailability(requiredCommands);
+    if (missingCommands.length > 0) {
+        return Response.json({ error: `Missing commands: ${missingCommands.join(', ')}` }, { status: 503 });
+    }
+    
+    // If everything is clear, proceed with task execution
+    return Response.json({ message: 'All checks passed. Ready for task execution.' });
 });
+
+async function checkForAPTLocks() {
+    // Logic to check APT locks
+tmp.lock = Deno.run({
+      cmd: ['bash', '-c', 'ls /var/lib/dpkg/lock*'],
+      stdout: 'piped',
+      stderr: 'piped'
+    });
+    
+    const { code } = await tmp.lock.status();
+    return code === 0; // Returns true if locks are present
+}
+
+async function checkCommandAvailability(commands) {
+    const missing = [];
+    for (const cmd of commands) {
+        const commandCheck = Deno.run({
+            cmd: ['bash', '-c', `which ${cmd}`],
+            stdout: 'piped',
+            stderr: 'piped',
+        });
+        const { code } = await commandCheck.status();
+        if (code !== 0) {
+            missing.push(cmd);
+        }
+    }
+    return missing;
+}
