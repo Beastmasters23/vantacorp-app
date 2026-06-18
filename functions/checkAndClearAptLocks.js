@@ -1,38 +1,33 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-async function clearAptLocks() {
-    const cmd = Deno.run({
-        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
-        stdout: 'piped',
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        const rawError = await cmd.stderrOutput();
-        const errorString = new TextDecoder().decode(rawError);
-        throw new Error(`Failed to clear apt locks: ${errorString}`);
-    }
-    cmd.close();
+async function checkSystemHealth() {
+    const aptLockStatus = await checkAptLocks();
+    const resourceAvailability = await checkResourceLimits();
+    return { aptLockStatus, resourceAvailability };
 }
 
-async function checkSudoPrivileges() {
-    const cmd = Deno.run({
-        cmd: ['sudo', '-n', 'true'],
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        throw new Error('Sudo privileges are required for this operation.');
-    }
-    cmd.close();
+async function checkAptLocks() {
+    // Logic to check for existing APT locks
+    // Return true if locks exist, false otherwise
+}
+
+async function checkResourceLimits() {
+    // Logic to check current system resource limits
+    // Return true if resources are available, false otherwise
 }
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await checkSudoPrivileges();
-        await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
+        const health = await checkSystemHealth();
+        if (health.aptLockStatus) {
+            return Response.json({ error: "APT locks detected, cannot proceed with task execution." }, { status: 503 });
+        }
+        if (!health.resourceAvailability) {
+            return Response.json({ error: "Insufficient resources to execute tasks." }, { status: 503 });
+        }
+        // Proceed with the task execution if both checks pass
+        return Response.json({ message: "System is healthy, proceeding with task execution." });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
