@@ -1,17 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 async function clearAptLock() {
-    await Deno.run({
-        cmd: ['bash', '-c', 'sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock']
+    const output = await Deno.run({
+        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock-frontend; sudo fuser -k /var/lib/dpkg/lock;']
     }).status();
+    return output.success;
 }
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await clearAptLock();
-        return Response.json({ message: 'Apt locks cleared successfully' }, { status: 200 });
-    } catch(error) {
+        const lockCleared = await clearAptLock();
+        if (lockCleared) {
+            return Response.json({ status: 'success', message: 'APT lock cleared successfully.' });
+        } else {
+            return Response.json({ error: 'Could not clear APT lock.' }, { status: 500 });
+        }
+    } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
 });
