@@ -1,38 +1,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 async function clearAptLocks() {
-    const cmd = Deno.run({
-        cmd: ['bash', '-c', 'sudo fuser -k /var/lib/dpkg/lock* && sudo rm -f /var/lib/dpkg/lock*'],
-        stdout: 'piped',
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        const rawError = await cmd.stderrOutput();
-        const errorString = new TextDecoder().decode(rawError);
-        throw new Error(`Failed to clear apt locks: ${errorString}`);
-    }
-    cmd.close();
+    // Logic to clear any APT locks if present 
+    // Example: await exec('sudo apt-get clean');
 }
 
-async function checkSudoPrivileges() {
-    const cmd = Deno.run({
-        cmd: ['sudo', '-n', 'true'],
-        stderr: 'piped',
-    });
-    const { code } = await cmd.status();
-    if (code !== 0) {
-        throw new Error('Sudo privileges are required for this operation.');
-    }
-    cmd.close();
+async function checkSystemReady() {
+    // Logic to check if the system is ready for task execution.
+    // Example: await exec('lsof /var/lib/dpkg/lock');
+    // If the lock is active, return false.
+    return true; // Replace with actual condition check 
 }
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     try {
-        await checkSudoPrivileges();
+        const isReady = await checkSystemReady();
+        if (!isReady) {
+            throw new Error('System is not ready for task execution.');
+        }
         await clearAptLocks();
-        return Response.json({ message: 'Apt locks cleared and sudo privileges verified.' });
+        // Execute the main task logic here
+        return Response.json({ message: 'Task execution initiated.' });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
